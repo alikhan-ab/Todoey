@@ -9,23 +9,29 @@
 import UIKit
 
 class TodoListViewController: UITableViewController {
-
-    var itemaArray = ["Find Mike", "Buy Eggs", "Destroy Demogorgon"]
+    
+    var itemsArray = ["Find Mike", "Buy Eggs", "Destroy Demogorgon"]
+    
+    let defaults = UserDefaults.standard
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        if let items = defaults.array(forKey: "TodoListArray") as? [String] {
+            itemsArray = items
+        }
     }
     
     // MARK: - TableView Datasource Methods
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemaArray.count
+        return itemsArray.count
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath)
     
-        cell.textLabel?.text = itemaArray[indexPath.row]
+        cell.textLabel?.text = itemsArray[indexPath.row]
         return cell
     }
     
@@ -53,7 +59,10 @@ class TodoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //What will happen when the user clicks Add Item button on our UIAlert
             guard let todoText = textField.text else { return }
-            self.itemaArray.append(todoText)
+            self.itemsArray.append(todoText)
+            
+            self.defaults.set(self.itemsArray, forKey: "TodoListArray")
+            
             self.tableView.reloadData()
             
         }
