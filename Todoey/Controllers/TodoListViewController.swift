@@ -8,11 +8,14 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
     
     var todoItems: Results<Item>?
     let realm = try! Realm()
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     
     var selectedCategory: Category? {
         didSet {
@@ -22,8 +25,42 @@ class TodoListViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-    
+        tableView.separatorStyle = .none
     }
+    
+    override func viewWillAppear(_ animated: Bool) {
+
+        title = selectedCategory?.name
+        
+        guard let colorHex = selectedCategory?.cellColor else { fatalError() }
+        
+        updateNavBar(withHexColor: colorHex)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexColor: "1D9BF6")
+    }
+    
+    // MARK: - Nav Bar Setup Methods
+    
+    func updateNavBar(withHexColor colorHexCode: String) {
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navigation controller does not exist.")}
+        
+        
+        guard let navBarColor = UIColor(hexString: colorHexCode) else { fatalError() }
+        
+        navBar.barTintColor = navBarColor
+        
+        navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+        
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor : ContrastColorOf(navBarColor, returnFlat: true)]
+        
+        searchBar.barTintColor = navBarColor
+        
+        
+        
+    }
+    
     
     // MARK: - TableView Datasource Methods
     
@@ -33,11 +70,16 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
     
         if let item = todoItems?[indexPath.row] {
             
             cell.textLabel?.text = item.title
+            
+            if let color = UIColor(hexString: (selectedCategory!.cellColor!))?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(todoItems!.count)) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
             
             cell.accessoryType = item.done ? .checkmark : .none
         } else {
@@ -64,6 +106,8 @@ class TodoListViewController: UITableViewController {
 
         tableView.reloadData()
     }
+    
+
     
     
     // MARK: - Add New Items
@@ -112,25 +156,23 @@ class TodoListViewController: UITableViewController {
         
         todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
 
-//        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
-//
-//        if let additionalPredicate = predicate {
-//            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
-//        } else {
-//            request.predicate = categoryPredicate
-//        }
-//
-//        do {
-//            itemArray = try context.fetch(request)
-//        } catch {
-//            print("Error fetching data from context: \(error)")
-//        }
-
         tableView.reloadData()
     }
     
     
+    //MARK: - Delete Data From Swipe
     
+    override func updateModel(at indexPath: IndexPath) {
+        if let itemForDeletion = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    realm.delete(itemForDeletion)
+                }
+            } catch {
+                print("Error removing an item: \(error)")
+            }
+        }
+    }
 }
 
 // MARK: - Seach bar methods
@@ -157,4 +199,5 @@ extension TodoListViewController: UISearchBarDelegate {
         }
     }
 }
+
 
